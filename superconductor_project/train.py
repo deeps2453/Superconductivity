@@ -120,3 +120,9 @@ def main():
 
 if __name__ == "__main__":
     main()
+# save SHAP background sample for explanations
+import numpy as np
+bg_size = min(100, len(X_scaled))
+bg_idx = np.random.choice(len(X_scaled), size=bg_size, replace=False)
+np.save(ARTIFACT_DIR / "bg.npy", X_scaled[bg_idx])
+print(f"Saved SHAP background sample (n={bg_size}) to artifacts/bg.npy")
