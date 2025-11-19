@@ -28,10 +28,8 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import roc_auc_score, mean_squared_error
 
-# ----------------------------
-# Configuration
-# ----------------------------
-SRC_CSV = Path("data/materials.csv")  # change if your CSV is elsewhere
+
+SRC_CSV = Path("data/materials.csv")  
 ARTIFACT_DIR = Path("artifacts")
 ARTIFACT_DIR.mkdir(exist_ok=True)
 RND = 42
@@ -40,9 +38,7 @@ RND = 42
 random.seed(RND)
 np.random.seed(RND)
 
-# ----------------------------
-# Data loader
-# ----------------------------
+
 def load_dataset(csv_path: Path = SRC_CSV):
     if not csv_path.exists():
         raise FileNotFoundError(f"CSV not found: {csv_path.resolve()}")
@@ -60,7 +56,7 @@ def load_dataset(csv_path: Path = SRC_CSV):
     # feature columns: all except target
     feature_cols = [c for c in df.columns if c != "critical_temp"]
 
-    # drop non-numeric feature columns if present (rare here)
+   
     X = df[feature_cols].copy()
     # ensure numeric
     for col in feature_cols:
@@ -69,9 +65,7 @@ def load_dataset(csv_path: Path = SRC_CSV):
     return X, y_class, y_reg, feature_cols
 
 
-# ----------------------------
-# Training function
-# ----------------------------
+
 def train_and_save():
     print("Loading dataset...")
     X, y_class, y_reg, feature_order = load_dataset()
@@ -82,12 +76,9 @@ def train_and_save():
         X, y_class, y_reg, test_size=0.20, random_state=RND, stratify=y_class
     )
 
-    # scaler used inside pipelines
+   
     scaler = StandardScaler()
 
-    # ----------------------------
-    # Classifier: handle class imbalance and safe CV
-    # ----------------------------
     n_pos = int((yc_train == 1).sum())
     n_neg = int((yc_train == 0).sum())
     print(f"Training class counts (train split): pos={n_pos}, neg={n_neg}")
@@ -95,7 +86,6 @@ def train_and_save():
     if n_pos == 0:
         raise RuntimeError("No positive examples (critical_temp>0) in training data. Cannot train classifier.")
 
-    # choose stratified splits safely: at most 5, at most number of positives
     n_splits = min(5, n_pos) if n_pos >= 2 else 2
     if n_splits < 2:
         n_splits = 2
@@ -128,9 +118,7 @@ def train_and_save():
     best_clf = clf_grid.best_estimator_
     print("Best classifier params:", clf_grid.best_params_)
 
-    # ----------------------------
-    # Regressor: KFold CV
-    # ----------------------------
+  
     reg_pipe = Pipeline([
         ("scaler", scaler),
         ("reg", GradientBoostingRegressor(random_state=RND))
@@ -157,9 +145,6 @@ def train_and_save():
     best_reg = reg_grid.best_estimator_
     print("Best regressor params:", reg_grid.best_params_)
 
-    # ----------------------------
-    # Evaluation on validation set
-    # ----------------------------
     print("Evaluating on validation set...")
     try:
         y_proba_val = best_clf.predict_proba(X_val)[:, 1]
@@ -177,29 +162,25 @@ def train_and_save():
 
     print(f"Validation metrics: ROC-AUC={auc}, RMSE={rmse}")
 
-    # ----------------------------
-    # Build KDTree for nearest-neighbor (on scaled full X)
-    # ----------------------------
+   
     print("Building KDTree on scaled descriptors...")
-    # use scaler from classifier pipeline to scale the entire dataset (pipeline expected)
+
     if hasattr(best_clf, "named_steps") and "scaler" in best_clf.named_steps:
         X_scaled = best_clf.named_steps["scaler"].transform(X)
     else:
-        # fallback: fit a fresh scaler on X
+        
         tmp_scaler = StandardScaler().fit(X)
         X_scaled = tmp_scaler.transform(X)
 
     kdtree = KDTree(X_scaled, leaf_size=40)
 
-    # compute OOD threshold: 95th percentile of nearest non-self distances
+    
     dists, idxs = kdtree.query(X_scaled, k=2)
     min_nonself = dists[:, 1]
     ood_threshold = float(np.percentile(min_nonself, 95))
     print(f"OOD threshold (95th pct) = {ood_threshold:.6g}")
 
-    # ----------------------------
-    # Save artifacts
-    # ----------------------------
+
     print("Saving artifacts to", ARTIFACT_DIR.resolve())
     joblib.dump(best_clf, ARTIFACT_DIR / "model_clf.joblib")
     joblib.dump(best_reg, ARTIFACT_DIR / "model_reg.joblib")
@@ -214,7 +195,7 @@ def train_and_save():
     with open(ARTIFACT_DIR / "metadata.json", "w") as fh:
         json.dump(metadata, fh, indent=2)
 
-    # SHAP background
+ 
     bg_size = min(100, X_scaled.shape[0])
     bg_idx = np.random.choice(X_scaled.shape[0], size=bg_size, replace=False)
     bg = X_scaled[bg_idx]
@@ -224,9 +205,7 @@ def train_and_save():
     print("All artifacts saved. Done.")
 
 
-# ----------------------------
-# Main
-# ----------------------------
+
 if __name__ == "__main__":
     train_and_save()
 
