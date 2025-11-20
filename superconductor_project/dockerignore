@@ -1,0 +1,50 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+*.egg-info/
+dist/
+build/
+
+# Jupyter Notebooks
+.ipynb_checkpoints/
+*.ipynb
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Documentation
+README.md
+LICENSE
+*.md
+
+# Large files
+*.zip
+*.tar.gz
+
+# Outputs (keep only artifacts)
+outputs/
+figures/
+notebooks/
+
+# Tests
+tests/
+test_*.py
+*_test.py
